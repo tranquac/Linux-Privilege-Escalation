@@ -1,6 +1,6 @@
 # Linux-Privilege-Escalation
-Synthesize, supplement from a number of other resources
-Editing and addition: TranQuac
+## Synthesize, supplement from a number of other resources
+## Editing and addition: TranQuac
 ## Summary
 
 * [Tools](#tools)
