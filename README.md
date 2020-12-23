@@ -18,8 +18,8 @@ Editing and addition: TranQuac
     * [Interesting capabilities](#interesting-capabilities)
 * [SUDO](#sudo)
     * [Allow Root Privilege to Binary commands](#allow-root-privilege-to-binary-commands)
-    * [Allow Root Privilege to Shell Script](allow-root-privilege-to-shell-script)
-    * [Allow Sudo Right to other Programs](allow-sudo-right-to-other-programs)
+    * [Allow Root Privilege to Shell Script](#allow-root-privilege-to-shell-script)
+    * [Allow Sudo Right to other Programs](#allow-sudo-right-to-other-programs)
     * [LD_PRELOAD](#ld_preload)
     * [Doas](#doas)
     * [sudo_inject](#sudo_inject)
@@ -425,7 +425,7 @@ View sudo rights:
 ```bash
 $ sudo -l
 ```
-###Allow Root Privilege to Binary commands
+### Allow Root Privilege to Binary commands
 (root) ALL: run all command as root user.
 ```bash
 $sudo su
