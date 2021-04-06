@@ -964,7 +964,39 @@ Linux Kernel 2.6.39 < 3.2.2 (Gentoo / Ubuntu x86/x64)
 ```powershell
 https://www.exploit-db.com/exploits/18411
 ```
+### LIST
 
+```powershell
+*2.6.32-21-genaric-pae https://raw.githubusercontent.com/FireFart/dirtycow/master/dirty.c
+gcc -m32 -pthread dirty.c -o dirty2 -lcrypt
+*linux2421		- Linux 2.4.7(crashed)
+*9.0 (28718.c)		- FreeBSD 9.0
+*centsos45 (9542.c)	- CentOS 4.4 - 4.5 (Linux 2.6 - 2.6.19)
+*linux26 (5093.c)	- Linux (2.6.23 - 2.6.24)
+*18411.c		- Linux 2.6.39 < 3.2.2 (Ubuntu 11.10, kernel 3.0.0-12)
+*37292.c(ubuntu)	- ubuntu 14.04 (Linux 3.13 - 3.19)
+Linux Kernel 2.6.17 < 2.6.24.1	5092
+Linux Kernel 2.4/2.6	9479
+CentOS 4.4/4.5 / Fedora Core 4/5/6 x86)	9542
+RDS Protocol' Local Privilege Escalation	15285
+FreeBSD 9.0 - Intel SYSRET Kernel Privilege Escalation	28718
+Apport/Abrt (Ubuntu / Fedora)	36746
+Ubuntu 12.04/14.04/14.10/15.04	37292
+Ubuntu 14.04/15.10	39166
+Stapler	Ubuntu 16.04	39772
+Dirty COW	40616
+Dirty COW /proc/self/mem' Race Condition	40847
+GNU Screen 4.5.0	41154
+Linux Kernel 4.4.0 (Ubuntu) - DCCP Double-Free	41458
+Ubuntu 14.04/16.04 (KASLR / SMEP)	43418
+Linux Kernel < 4.4.0-116 (Ubuntu 16.04.4)	44298
+Linux Kernel 2.6	8478
+Dirty COW	40616
+GUnet OpenEclass E-learning platform 1.7.3	48106
+Dirty COW	40839
+Linux Kernel 3.13.0 < 3.19 (Ubuntu 12.04/14.04/14.10/15.04) - 'overlayfs'	37292
+Linux Kernel < 4.13.9 (Ubuntu 16.04 / Fedora 27)	45010
+``
 
 ## References
 -[https://thecryptonian.co.uk/linux-privilege-escalation-cheat-sheet/](https://thecryptonian.co.uk/linux-privilege-escalation-cheat-sheet/#Sudo_LD_LIBRARY_PATH_Privilege_Escalation)
