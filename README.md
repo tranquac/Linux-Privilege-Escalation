@@ -45,6 +45,7 @@
     * [CVE-2010-3904 (RDS)](#[CVE-2010-3904-rds)
     * [CVE-2010-4258 (Full Nelson)](#CVE-2010-4258-full-nelson)
     * [CVE-2012-0056 (Mempodipper)](#CVE-2012-0056-mempodipper)
+    * [LIST KERNEL](#LIST)
 
 
 ## Tools
@@ -996,10 +997,11 @@ GUnet OpenEclass E-learning platform 1.7.3	48106
 Dirty COW	40839
 Linux Kernel 3.13.0 < 3.19 (Ubuntu 12.04/14.04/14.10/15.04) - 'overlayfs'	37292
 Linux Kernel < 4.13.9 (Ubuntu 16.04 / Fedora 27)	45010
-``
+```
 
 ## References
 -[https://thecryptonian.co.uk/linux-privilege-escalation-cheat-sheet/](https://thecryptonian.co.uk/linux-privilege-escalation-cheat-sheet/#Sudo_LD_LIBRARY_PATH_Privilege_Escalation)
+-[https://github.com/Ignitetechnologies/Privilege-Escalation](https://github.com/Ignitetechnologies/Privilege-Escalation)
 -[https://www.hackingarticles.in/category/privilege-escalation/](https://www.hackingarticles.in/category/privilege-escalation/)
 - [swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources](https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md)
 - [Privilege escalation via Docker - April 22, 2015 - Chris Foster](https://fosterelli.co/privilege-escalation-via-docker.html)
